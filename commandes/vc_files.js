@@ -61,7 +61,7 @@ zokou({ nomCom: 'getallmembers',
 zokou({ nomCom: 'channel',
     desc: 'To check runtime',
     Categorie: 'My Contact',
-    reaction: '🐞', 
+    reaction: '✌️', 
     fromMe: 'true', 
 
 

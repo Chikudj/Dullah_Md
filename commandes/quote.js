@@ -20,7 +20,7 @@ zokou({ nomCom: 'quote', categorie: 'Fun' }, async (dest, zk, commandeOptions) =
 👤 Character: ${quote.character}
 💬 Quote: ${quote.quote}
 
-Powered by Dullah-MD`);
+Powered by Boniphace-MD`);
         });
     } catch (e) {
       repondre('Erreur lors de la génération de la citation : ' + e.message);
@@ -40,7 +40,7 @@ Powered by Dullah-MD`);
 👤 Character: ${quote.character}
 💬 Quote: ${quote.quote}
 
-Powered by Dullah-Md bot`);
+Powered by Dullah-Md Bot`);
         });
     } catch (e) {
       repondre('Erreur lors de la génération de la citation : ' + e.message);

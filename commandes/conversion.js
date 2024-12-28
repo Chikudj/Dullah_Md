@@ -1,132 +1,111 @@
 const { Sticker, createSticker, StickerTypes } = require('wa-sticker-formatter');
 const { zokou } = require("../framework/zokou");
-const traduire = require("../framework/traduction");
-const { downloadMediaMessage,downloadContentFromMessage } =  require('@whiskeysockets/baileys');
-const fs =require("fs-extra") ;
-const axios = require('axios');  
-const FormData = require('form-data');
-const { exec } = require("child_process");
+const { downloadMediaMessage } = require('@whiskeysockets/baileys');
+const fs = require("fs-extra");
+const ffmpeg = require("fluent-ffmpeg");
+const { Catbox } = require('node-catbox');
 
+const catbox = new Catbox();
 
+async function uploadToCatbox(Path) {
+    if (!fs.existsSync(Path)) {
+        throw new Error("File does not exist");
+    }
 
-async function uploadToTelegraph(Path) {
-  if (!fs.existsSync(Path)) {
-      throw new Error("Fichier non existant");
-  }
+    try {
+        const response = await catbox.uploadFile({
+            path: Path // Provide the path to the file
+        });
 
-  try {
-      const form = new FormData();
-      form.append("file", fs.createReadStream(Path));
-
-      const { data } = await axios.post("https://telegra.ph/upload", form, {
-          headers: {
-              ...form.getHeaders(),
-          },
-      });
-
-      if (data && data[0] && data[0].src) {
-          return "https://telegra.ph" + data[0].src;
-      } else {
-          throw new Error("Erreur lors de la récupération du lien de la vidéo");
-      }
-  } catch (err) {
-      throw new Error(String(err));
-  }
+        if (response) {
+            return response; // returns the uploaded file URL
+        } else {
+            throw new Error("Error retrieving the file link");
+        }
+    } catch (err) {
+        throw new Error(String(err));
+    }
 }
 
-
-
-zokou({nomCom:"sticker",categorie: "Conversion", reaction: "👨🏿‍💻"},async(origineMessage,zk,commandeOptions)=>{
-
-let {ms,mtype,arg,repondre,nomAuteurMessage}=commandeOptions
-  var txt=JSON.stringify(ms.message)
-
-  var mime=mtype === "imageMessage" || mtype === "videoMessage";
-  var tagImage = mtype==="extendedTextMessage" && txt.includes("imageMessage")
-  var tagVideo = mtype==="extendedTextMessage" && txt.includes("videoMessage")
-
-const alea = (ext) => {
-  return `${Math.floor(Math.random() * 10000)}${ext}`;};
-
-
-  const stickerFileName = alea(".webp");
-
-
-            // image
-  if (mtype === "imageMessage" ||tagImage) {
-    let downloadFilePath;
-    if (ms.message.imageMessage) {
-      downloadFilePath = ms.message.imageMessage;
-    } else {
-      // picture mentioned
-      downloadFilePath =
-        ms.message.extendedTextMessage.contextInfo.quotedMessage.imageMessage;
-    }
-    // picture
-    const media = await downloadContentFromMessage(downloadFilePath, "image");
-    let buffer = Buffer.from([]);
-    for await (const elm of media) {
-      buffer = Buffer.concat([buffer, elm]);
-    }
-
-    sticker = new Sticker(buffer, {
-      pack:"Dullah-Md-Bot" ,
-      author: nomAuteurMessage,
-      type:
-        arg.includes("crop") || arg.includes("c")
-          ? StickerTypes.CROPPED
-          : StickerTypes.FULL,
-      quality: 100,
+async function convertToMp3(inputPath, outputPath) {
+    return new Promise((resolve, reject) => {
+        ffmpeg(inputPath)
+            .toFormat("mp3")
+            .on("error", (err) => reject(err))
+            .on("end", () => resolve(outputPath))
+            .save(outputPath);
     });
-  } else if (mtype === "videoMessage" || tagVideo) {
-    // videos
-    let downloadFilePath;
-    if (ms.message.videoMessage) {
-      downloadFilePath = ms.message.videoMessage;
+}
+
+zokou({ nomCom: "url", categorie: "General", reaction: "👨🏿‍💻" }, async (origineMessage, zk, commandeOptions) => {
+    const { msgRepondu, repondre } = commandeOptions;
+
+    if (!msgRepondu) {
+        repondre('Please reply to an image, video, or audio file.');
+        return;
+    }
+
+    let mediaPath, mediaType;
+
+    if (msgRepondu.videoMessage) {
+        const videoSize = msgRepondu.videoMessage.fileLength;
+
+        if (videoSize > 50 * 1024 * 1024) {
+            repondre('The video is too long. Please send a smaller video.');
+            return;
+        }
+
+        mediaPath = await zk.downloadAndSaveMediaMessage(msgRepondu.videoMessage);
+        mediaType = 'video';
+    } else if (msgRepondu.imageMessage) {
+        mediaPath = await zk.downloadAndSaveMediaMessage(msgRepondu.imageMessage);
+        mediaType = 'image';
+    } else if (msgRepondu.audioMessage) {
+        mediaPath = await zk.downloadAndSaveMediaMessage(msgRepondu.audioMessage);
+        mediaType = 'audio';
+
+        const outputPath = `${mediaPath}.mp3`;
+
+        try {
+            // Convert audio to MP3 format
+            await convertToMp3(mediaPath, outputPath);
+            fs.unlinkSync(mediaPath); // Remove the original audio file
+            mediaPath = outputPath; // Update the path to the converted MP3 file
+        } catch (error) {
+            console.error("Error converting audio to MP3:", error);
+            repondre('Failed to process the audio file.');
+            return;
+        }
     } else {
-      downloadFilePath =
-        ms.message.extendedTextMessage.contextInfo.quotedMessage.videoMessage;
-    }
-    const stream = await downloadContentFromMessage(downloadFilePath, "video");
-    let buffer = Buffer.from([]);
-    for await (const elm of stream) {
-      buffer = Buffer.concat([buffer, elm]);
+        repondre('Unsupported media type. Reply with an image, video, or audio file.');
+        return;
     }
 
-    sticker = new Sticker(buffer, {
-      pack:"Dullah-Md-Bot", // pack stick
-      author:  nomAuteurMessage, // name of the author of the stick
-      type:
-        arg.includes("-r") || arg.includes("-c")
-          ? StickerTypes.CROPPED
-          : StickerTypes.FULL,
-      quality: 40,
-    });
-  } else {
-    repondre("Please mention an image or video!");
-    return;
-  }
+    try {
+        const catboxUrl = await uploadToCatbox(mediaPath);
+        fs.unlinkSync(mediaPath); // Remove the local file after uploading
 
-  await sticker.toFile(stickerFileName);
-  await zk.sendMessage(
-    origineMessage,
-    {
-      sticker: fs.readFileSync(stickerFileName),
-    },
-    { quoted: ms }
-  );
-
-try{
-  fs.unlinkSync(stickerFileName)
-}catch(e){console.log(e)}
-
-
-
-
-
-  
+        // Respond with the URL based on media type
+        switch (mediaType) {
+            case 'image':
+                repondre(`Here is your image URL:\n${catboxUrl}`);
+                break;
+            case 'video':
+                repondre(`Here is your video URL:\n${catboxUrl}`);
+                break;
+            case 'audio':
+                repondre(`Here is your audio URL (MP3):\n${catboxUrl}`);
+                break;
+            default:
+                repondre('An unknown error occurred.');
+                break;
+        }
+    } catch (error) {
+        console.error('Error while creating your URL:', error);
+        repondre('Oops, an error occurred.');
+    }
 });
-
+/*
 zokou({nomCom:"scrop",categorie: "Conversion", reaction: "👨🏿‍💻"},async(origineMessage,zk,commandeOptions)=>{
    const {ms , msgRepondu,arg,repondre,nomAuteurMessage} = commandeOptions ;
 
@@ -252,7 +231,7 @@ zokou({ nomCom: "write", categorie: "Conversion", reaction: "👨🏿‍💻" },
     // Create the sticker
     const stickerMess = new Sticker(meme, {
       pack: nomAuteurMessage,
-      author: 'Dulla-Md-Bot',
+      author: 'Dullah-Md',
       type: StickerTypes.FULL,
       categories: ["🤩", "🎉"],
       id: "12345",
@@ -345,34 +324,4 @@ zokou({ nomCom: "trt", categorie: "Conversion", reaction: "👨🏿‍💻" }, a
 
 
 }) ;
-
-
-zokou({ nomCom: "url", categorie: "Conversion", reaction: "👨🏿‍💻" }, async (origineMessage, zk, commandeOptions) => {
-  const { msgRepondu, repondre } = commandeOptions;
-
-  if (!msgRepondu) {
-      repondre('mention a image or video');
-      return;
-  }
-
-  let mediaPath;
-
-  if (msgRepondu.videoMessage) {
-      mediaPath = await zk.downloadAndSaveMediaMessage(msgRepondu.videoMessage);
-  } else if (msgRepondu.imageMessage) {
-      mediaPath = await zk.downloadAndSaveMediaMessage(msgRepondu.imageMessage);
-  } else {
-      repondre('mention a image or video');
-      return;
-  }
-
-  try {
-      const telegraphUrl = await uploadToTelegraph(mediaPath);
-      fs.unlinkSync(mediaPath);  // Supprime le fichier après utilisation
-
-      repondre(telegraphUrl);
-  } catch (error) {
-      console.error('Erreur lors de la création du lien Telegraph :', error);
-      repondre('Opps error');
-  }
-});
+**/

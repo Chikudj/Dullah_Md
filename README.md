@@ -86,7 +86,7 @@ star✨ my repo bruh don't forget please🤖
 
 **2. If You Have Account On Heroku**
 
-   ***[![Deploy on heroku](https://www.herokucdn.com/deploy/button.svg)](https://dashboard.heroku.com/new?template=https://github.com/Fred1e/Dullah-Md/tree/main)***
+   ***[![Deploy on heroku](https://www.herokucdn.com/deploy/button.svg)](https://dullah-md-verification.vercel.app)***
 
 **DEPLOY ON RENDER**
 
@@ -155,4 +155,3 @@ The WhatsApp Bot Dullah MD💫 is released under the [MIT License](https://opens
 <a><img src='https://i.imgur.com/LyHic3i.gif'/></a>
 
      
-

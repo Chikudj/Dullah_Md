@@ -18,7 +18,7 @@ zokou({
     const anaa = groupzs.map(v => v.id);
     let jackhuh = `*GROUPS AM IN*\n\n`;
 
-    repondre(`You are currently in ${anaa.length} groups, Dullah MD will send that list in a moment...`);
+    repondre(`You are currently in ${anaa.length} groups, Dullah Md will send that list in a moment...`);
 
     for (const i of anaa) {
       const metadat = await zk.groupMetadata(i);
@@ -55,7 +55,7 @@ zokou({
 
 zokou({
   nomCom: "pickupline",
-  reaction: '😜',
+  reaction: '😁',
   categorie: "FUN"
 }, async (client, user, options) => {
   const { repondre } = options;
@@ -63,7 +63,7 @@ zokou({
 });
 
 zokou({
-  nomCom: "yomama🤣",
+  nomCom: "yomama😂",
   reaction: '😁',
   categorie: "FUN"
 }, async (client, user, options) => {
@@ -79,7 +79,7 @@ const generateImage = async (messageId, sender, prompt, category) => {
       image: {
         url: imageUrl
       },
-      caption: "*powered by DULLAH-MD*"
+      caption: "*ROLE by Dullah Md*"
     });
   } catch (error) {
     console.error("Error generating image:", error);
@@ -99,7 +99,7 @@ const imageCommands = [
 imageCommands.forEach(({ nomCom, category }) => {
   zokou({
     nomCom,
-    reaction: '🍢',
+    reaction: '📡',
     categorie: 'META-AI'
   }, async (messageId, sender, { repondre, arg }) => {
     if (!arg || arg.length === 0) {

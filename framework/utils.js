@@ -28,4 +28,4 @@ module.exports = {
   delay,
   loading,
   react
-     }
+}

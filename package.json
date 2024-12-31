@@ -1,5 +1,4 @@
-
- {
+{
   "name": "babyfx",
   "version": "2.0.0",
   "description": "",
@@ -13,12 +12,12 @@
   "keywords": [
     "bot",
     "Baileys",
-    "Dullah-Md",
+    "Alpha-Md",
     "whatsapp",
     "whatsapp-bot",
-    "dullah"
+    "keithkeizzah"
    ],
-  "author": "dullah",
+  "author": "keithkeizzah",
 "license": "ISC",
   "dependencies": {
     "@adiwajshing/keyed-db": "^0.2.4",
